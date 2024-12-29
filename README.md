@@ -34,11 +34,11 @@ Ensure these dependencies are installed before running the script.
   ```
 * Make the script executable.
   ```bash
-  chmod +x starship_setup.sh
+  chmod +x starship-setup.sh
   ```
 * Run the script.
   ```bash
-  ./starship_setup.sh
+  ./starship-setup.sh
   ```
 * Follow the prompts to complete the installation or update.
 
