@@ -1,6 +1,6 @@
 # Starship (Star Fox 64 PC) Installation and Configuration Script
 
-This repository contains a Bash script to automate the installation and configuration of the Starship (Star Fox 64 PC) game/port for Linux. While it is specifically designed for the Steam Deck, it should work on most Linux distributions.
+This repository contains a Bash script to automate the installation and configuration of the Starship (Star Fox 64 game PC port) on Linux. While it is specifically designed for the Steam Deck, it should work on most Linux distributions.
 
 The script provides a user-friendly setup experience with detailed instructions and prompts for manual steps when necessary.
 
@@ -9,9 +9,9 @@ The script provides a user-friendly setup experience with detailed instructions 
 * Prompts the user to specify an installation directory (default: ~/Games/StarFox64PC).
 * Detects whether it needs to execute the initial installation or update an existing installation.
 * Provides links to manually download necessary binaries and OTR files from the latest GitHub action artifacts.
-* Ensures ROM files are placed in the correct location and verifies them using their SHA-1 checksum.
-* Clones or updates the Starship repository to provide necessary configuration files.
-* Executes Torch to generate the required OTR file from the verified ROM.
+* Prompts the user to place a ROM file in the correct location and ensures/verifies the ROM file using SHA-1 checksum.
+* Clones or updates the Starship repository to provide latest necessary configuration files.
+* Executes Torch to generate the required OTR file from the provided ROM.
 * Offers step-by-step instructions for adding the game to Steam and configuring Steam Input for optimal gameplay, especially on the Steam Deck.
 
 ## Requirements
