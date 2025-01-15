@@ -18,12 +18,12 @@
 # 2. Depending on the installation directory state, it executes the initial
 #    installation of the game and all required files, or it updates an existing
 #    installation to the latest version.
-# 3. Prompts the user with links to download necessary binaries and OTR files
+# 3. Prompts the user with links to download necessary binaries and O2R files
 #    from the latest GitHub action artifacts.
 # 4. Ensures ROM files are placed and verified with their SHA-1 checksum.
 # 5. Clones or updates the Starship repository to provide necessary
 #    configuration files.
-# 6. Executes Torch to generate the required OTR file from the verified ROM.
+# 6. Executes Torch to generate the required O2R file from the verified ROM.
 # 7. Provides step-by-step instructions for adding the game to Steam and
 #    configuring Steam Input for an optimal experience on the Steam Deck.
 #
@@ -86,20 +86,22 @@ echo -e "${GREEN}Installation directory set to:${NC} \"${CYAN}$GAME_DIR${NC}\"."
 # now we can define more paths and variables - depending on GAME_DIR
 GAME_BINARY_FILE="$GAME_DIR/starship.AppImage"
 GAME_VERSION_FILE="$GAME_DIR/VERSION"
-GAME_OTR_FILE="$GAME_DIR/starship.otr"
-GAME_ROM_OTR_FILE="$GAME_DIR/sf64.otr"
+GAME_O2R_FILE="$GAME_DIR/starship.o2r"
+GAME_ROM_OTR_FILE_OLD="$GAME_DIR/sf64.otr"
+GAME_ROM_O2R_FILE="$GAME_DIR/sf64.o2r"
 GAME_ROM_DIR="$GAME_DIR/rom"
-GAME_GENERATEOTR_DIR="$GAME_DIR/generate-otr"
-GAME_GENERATEOTR_ROM_OTR_FILE="$GAME_GENERATEOTR_DIR/sf64.otr"
+GAME_GENERATEOTR_DIR_OLD="$GAME_DIR/generate-otr"
+GAME_GENERATEO2R_DIR="$GAME_DIR/generate-o2r"
+GAME_GENERATEO2R_ROM_O2R_FILE="$GAME_GENERATEO2R_DIR/sf64.o2r"
 GAME_SOURCES_DIR="$GAME_DIR/sources"
 GAME_SOURCES_CONFIG_FILE="$GAME_SOURCES_DIR/config.yml"
 GAME_SOURCES_ASSETS_DIR="$GAME_SOURCES_DIR/assets"
 GAME_SOURCES_INCLUDE_DIR="$GAME_SOURCES_DIR/include"
 TEMP_DIR="$GAME_DIR/downloads"
 TEMP_BINARY_DOWNLOAD_FILE="$TEMP_DIR/Starship-linux.zip"
-TEMP_OTR_DOWNLOAD_FILE="$TEMP_DIR/starship.otr.zip"
+TEMP_O2R_DOWNLOAD_FILE="$TEMP_DIR/starship.o2r.zip"
 TEMP_BINARY_FILE="$TEMP_DIR/starship.appimage"
-TEMP_OTR_FILE="$TEMP_DIR/starship.otr"
+TEMP_O2R_FILE="$TEMP_DIR/starship.o2r"
 
 PERFORMING_UPDATE=0
 # are we installing or updating...?
@@ -156,9 +158,9 @@ if [ -z "$STARSHIP_ACTIONRUN_ARTIFACT_LINUX_ID" ]; then
     exit 1
 fi
 
-STARSHIP_ACTIONRUN_ARTIFACT_OTR_ID=$(echo "$STARSHIP_ACTIONRUN_ARTIFACTS_JSON" | jq -r '.artifacts[] | select(.name == "starship.otr") | .id')
-if [ -z "$STARSHIP_ACTIONRUN_ARTIFACT_OTR_ID" ]; then
-    echo -e "${RED}Error: unable to get OTR artifact download ID.${NC}"
+STARSHIP_ACTIONRUN_ARTIFACT_O2R_ID=$(echo "$STARSHIP_ACTIONRUN_ARTIFACTS_JSON" | jq -r '.artifacts[] | select(.name == "starship.o2r") | .id')
+if [ -z "$STARSHIP_ACTIONRUN_ARTIFACT_O2R_ID" ]; then
+    echo -e "${RED}Error: unable to get O2R artifact download ID.${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
@@ -171,10 +173,10 @@ STARSHIP_ACTIONRUN_ARTIFACT_LINUX_DOWNLOAD_URL="$STARSHIP_ACTIONRUN_HTML_URL/art
 #    exit 1
 #fi
 
-STARSHIP_ACTIONRUN_ARTIFACT_OTR_DOWNLOAD_URL="$STARSHIP_ACTIONRUN_HTML_URL/artifacts/$STARSHIP_ACTIONRUN_ARTIFACT_OTR_ID"
-#wget -nv "$STARSHIP_ACTIONRUN_ARTIFACT_OTR_DOWNLOAD_URL" -O "$TEMP_OTR_DOWNLOAD_FILE"
-#if [ ! -f "$TEMP_OTR_DOWNLOAD_FILE" ]; then
-#    echo -e "${RED}Error: download failed, please check $TEMP_OTR_DOWNLOAD_FILE${NC}"
+STARSHIP_ACTIONRUN_ARTIFACT_O2R_DOWNLOAD_URL="$STARSHIP_ACTIONRUN_HTML_URL/artifacts/$STARSHIP_ACTIONRUN_ARTIFACT_O2R_ID"
+#wget -nv "$STARSHIP_ACTIONRUN_ARTIFACT_O2R_DOWNLOAD_URL" -O "$TEMP_O2R_DOWNLOAD_FILE"
+#if [ ! -f "$TEMP_O2R_DOWNLOAD_FILE" ]; then
+#    echo -e "${RED}Error: download failed, please check $TEMP_O2R_DOWNLOAD_FILE${NC}"
 #    #read -p "Press Enter to exit..."
 #    exit 1
 #fi
@@ -183,24 +185,24 @@ STARSHIP_ACTIONRUN_ARTIFACT_OTR_DOWNLOAD_URL="$STARSHIP_ACTIONRUN_HTML_URL/artif
 echo -e "${BLUE}GitHub authentication is required to download artifacts directly.${NC}"
 echo -e "${YELLOW}Please manually download the following files and place them in the \"${TEMP_DIR}\" folder.${NC}"
 echo -e "Linux binary artifact: ${CYAN}$STARSHIP_ACTIONRUN_ARTIFACT_LINUX_DOWNLOAD_URL${NC}"
-echo -e "OTR artifact: ${CYAN}$STARSHIP_ACTIONRUN_ARTIFACT_OTR_DOWNLOAD_URL${NC}"
+echo -e "O2R artifact: ${CYAN}$STARSHIP_ACTIONRUN_ARTIFACT_O2R_DOWNLOAD_URL${NC}"
 
 mkdir -p "$TEMP_DIR"
 rm -v "$TEMP_BINARY_DOWNLOAD_FILE" 2>/dev/null
-rm -v "$TEMP_OTR_DOWNLOAD_FILE" 2>/dev/null
+rm -v "$TEMP_O2R_DOWNLOAD_FILE" 2>/dev/null
 while true; do
     # check if Linux binary artifact is downloaded
     if [ ! -f "$TEMP_BINARY_DOWNLOAD_FILE" ]; then
         echo -e "${RED}Linux binary artifact not found at \"${NC}${CYAN}$TEMP_BINARY_DOWNLOAD_FILE${NC}${RED}\".${NC}"
         echo -e "Please download it from: ${CYAN}$STARSHIP_ACTIONRUN_ARTIFACT_LINUX_DOWNLOAD_URL${NC}"
     fi
-    # check if OTR artifact is downloaded
-    if [ ! -f "$TEMP_OTR_DOWNLOAD_FILE" ]; then
-        echo -e "${RED}OTR artifact not found at \"${NC}${CYAN}$TEMP_OTR_DOWNLOAD_FILE${NC}${RED}\".${NC}"
-        echo -e "Please download it from: ${CYAN}$STARSHIP_ACTIONRUN_ARTIFACT_OTR_DOWNLOAD_URL${NC}"
+    # check if O2R artifact is downloaded
+    if [ ! -f "$TEMP_O2R_DOWNLOAD_FILE" ]; then
+        echo -e "${RED}O2R artifact not found at \"${NC}${CYAN}$TEMP_O2R_DOWNLOAD_FILE${NC}${RED}\".${NC}"
+        echo -e "Please download it from: ${CYAN}$STARSHIP_ACTIONRUN_ARTIFACT_O2R_DOWNLOAD_URL${NC}"
     fi
     # check if both files are present
-    if [ -f "$TEMP_BINARY_DOWNLOAD_FILE" ] && [ -f "$TEMP_OTR_DOWNLOAD_FILE" ]; then
+    if [ -f "$TEMP_BINARY_DOWNLOAD_FILE" ] && [ -f "$TEMP_O2R_DOWNLOAD_FILE" ]; then
         echo -e "${GREEN}Both files have been downloaded successfully.${NC}"
         break
     fi
@@ -220,16 +222,16 @@ if [ ! -f "$TEMP_BINARY_DOWNLOAD_FILE" ] ; then
     exit 1
 fi
 unzip -u -o -q "$TEMP_BINARY_DOWNLOAD_FILE" -d "$TEMP_DIR" && mv -v "$TEMP_BINARY_FILE" "$GAME_BINARY_FILE" && chmod +x "$GAME_BINARY_FILE" && rm -v "$TEMP_BINARY_DOWNLOAD_FILE"
-if [ ! -f "$TEMP_OTR_DOWNLOAD_FILE" ]; then
-    echo -e "${RED}OTR artifact not found at \"$TEMP_OTR_DOWNLOAD_FILE\".${NC}"
+if [ ! -f "$TEMP_O2R_DOWNLOAD_FILE" ]; then
+    echo -e "${RED}O2R artifact not found at \"$TEMP_O2R_DOWNLOAD_FILE\".${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
-unzip -u -o -q "$TEMP_OTR_DOWNLOAD_FILE" -d "$TEMP_DIR" && mv -v "$TEMP_OTR_FILE" "$GAME_OTR_FILE" && rm -v "$TEMP_OTR_DOWNLOAD_FILE"
+unzip -u -o -q "$TEMP_O2R_DOWNLOAD_FILE" -d "$TEMP_DIR" && mv -v "$TEMP_O2R_FILE" "$GAME_O2R_FILE" && rm -v "$TEMP_O2R_DOWNLOAD_FILE"
 
 echo -e "${GREEN}Download was successful.${NC}"
 
-echo "Generating OTR from ROM file..."
+echo "Generating O2R from ROM file..."
 
 # ROM handling
 mkdir -p "$GAME_ROM_DIR"
@@ -279,68 +281,70 @@ else
     echo -e "${GREEN}Cloned GitHub repository to $GAME_SOURCES_DIR.${NC}"
 fi
 
-# torch - generate OTR
-mkdir -p "$GAME_GENERATEOTR_DIR"
-GAME_GENERATEOTR_ROM_Z64_FILE="$GAME_GENERATEOTR_DIR/$(basename "$GAME_ROM_Z64_FILE")"
+# torch - generate O2R
+rm -rfv "$GAME_GENERATEOTR_DIR_OLD" # remove old generate-otr directory
+mkdir -p "$GAME_GENERATEO2R_DIR"
+GAME_GENERATEO2R_ROM_Z64_FILE="$GAME_GENERATEO2R_DIR/$(basename "$GAME_ROM_Z64_FILE")"
 
-# copy the verified ROM file to the generate-otr directory
-cp -v "$GAME_ROM_Z64_FILE" "$GAME_GENERATEOTR_ROM_Z64_FILE"
+# copy the verified ROM file to the generate-o2r directory
+cp -v "$GAME_ROM_Z64_FILE" "$GAME_GENERATEO2R_ROM_Z64_FILE"
 
 # download the latest torch binary
-wget -nv https://github.com/HarbourMasters/Torch/releases/latest/download/torch -O "$GAME_GENERATEOTR_DIR/torch-latest"
-chmod +x "$GAME_GENERATEOTR_DIR/torch-latest"
-echo -e "${GREEN}Downloaded latest TORCH to $GAME_GENERATEOTR_DIR/torch-latest.${NC}"
+wget -nv https://github.com/HarbourMasters/Torch/releases/latest/download/torch -O "$GAME_GENERATEO2R_DIR/torch-latest"
+chmod +x "$GAME_GENERATEO2R_DIR/torch-latest"
+echo -e "${GREEN}Downloaded latest TORCH to $GAME_GENERATEO2R_DIR/torch-latest.${NC}"
 
 # copy configuration, assets and include files required for torch
 if [ -f "$GAME_SOURCES_CONFIG_FILE" ]; then
-    rm -rfv "$GAME_GENERATEOTR_DIR/config.yml"
-    cp "$GAME_SOURCES_CONFIG_FILE" "$GAME_GENERATEOTR_DIR"
-    echo -e "${GREEN}Copied config.yml to $GAME_GENERATEOTR_DIR.${NC}"
+    rm -rfv "$GAME_GENERATEO2R_DIR/config.yml"
+    cp "$GAME_SOURCES_CONFIG_FILE" "$GAME_GENERATEO2R_DIR"
+    echo -e "${GREEN}Copied config.yml to $GAME_GENERATEO2R_DIR.${NC}"
 else
     echo -e "${RED}Error: $GAME_SOURCES_CONFIG_FILE not found!${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
 if [ -d "$GAME_SOURCES_ASSETS_DIR" ]; then
-    rm -rfv "$GAME_GENERATEOTR_DIR/assets"
-    cp -r "$GAME_SOURCES_ASSETS_DIR" "$GAME_GENERATEOTR_DIR"
-    echo -e "${GREEN}Copied assets folder to $GAME_GENERATEOTR_DIR.${NC}"
+    rm -rfv "$GAME_GENERATEO2R_DIR/assets"
+    cp -r "$GAME_SOURCES_ASSETS_DIR" "$GAME_GENERATEO2R_DIR"
+    echo -e "${GREEN}Copied assets folder to $GAME_GENERATEO2R_DIR.${NC}"
 else
     echo -e "${RED}Error: $GAME_SOURCES_ASSETS_DIR not found!${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
 if [ -d "$GAME_SOURCES_INCLUDE_DIR" ]; then
-    rm -rfv "$GAME_GENERATEOTR_DIR/include"
-    cp -r "$GAME_SOURCES_INCLUDE_DIR" "$GAME_GENERATEOTR_DIR"
-    echo -e "${GREEN}Copied includes folder to $GAME_GENERATEOTR_DIR.${NC}"
+    rm -rfv "$GAME_GENERATEO2R_DIR/include"
+    cp -r "$GAME_SOURCES_INCLUDE_DIR" "$GAME_GENERATEO2R_DIR"
+    echo -e "${GREEN}Copied includes folder to $GAME_GENERATEO2R_DIR.${NC}"
 else
     echo -e "${RED}Error: $GAME_SOURCES_INCLUDE_DIR not found!${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
 
-# execute torch to generate OTR file
-echo -e "${YELLOW}Executing \"${NC}${CYAN}$GAME_GENERATEOTR_DIR/torch-latest otr $GAME_GENERATEOTR_ROM_Z64_FILE${NC}${YELLOW}\" to generate ROM OTR...${NC}"
+# execute torch to generate O2R file
+echo -e "${YELLOW}Executing \"${NC}${CYAN}$GAME_GENERATEO2R_DIR/torch-latest o2r $GAME_GENERATEO2R_ROM_Z64_FILE${NC}${YELLOW}\" to generate ROM O2R...${NC}"
 (
-    cd "$GAME_GENERATEOTR_DIR" || { echo -e "${RED}Error: Failed to change directory to $GAME_GENERATEOTR_DIR${NC}"; exit 1; }
-    ./torch-latest otr "$GAME_GENERATEOTR_ROM_Z64_FILE" >/dev/null
+    cd "$GAME_GENERATEO2R_DIR" || { echo -e "${RED}Error: Failed to change directory to $GAME_GENERATEO2R_DIR${NC}"; exit 1; }
+    ./torch-latest o2r "$GAME_GENERATEO2R_ROM_Z64_FILE" >/dev/null
 )
 if [ $? -ne 0 ]; then
-    rm -rfv "$GAME_GENERATEOTR_ROM_Z64_FILE"
+    rm -rfv "$GAME_GENERATEO2R_ROM_Z64_FILE"
     echo -e "${RED}Error: torch-latest failed to execute.${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
 
-# check if torch successfully generated OTR file
-if [ -f "$GAME_GENERATEOTR_ROM_OTR_FILE" ]; then
-    rm -rfv "$GAME_GENERATEOTR_ROM_Z64_FILE"
-    echo -e "${GREEN}torch-latest executed successfully. Copying generated OTR...${NC}"
-    mv -v "$GAME_GENERATEOTR_ROM_OTR_FILE" "$GAME_ROM_OTR_FILE"
+# check if torch successfully generated O2R file
+if [ -f "$GAME_GENERATEO2R_ROM_O2R_FILE" ]; then
+    rm -rfv "$GAME_GENERATEO2R_ROM_Z64_FILE"
+    echo -e "${GREEN}torch-latest executed successfully. Copying generated O2R...${NC}"
+    mv -v "$GAME_GENERATEO2R_ROM_O2R_FILE" "$GAME_ROM_O2R_FILE"
+    rm -rfv "$GAME_ROM_OTR_FILE_OLD" # remove old sf64.otr file
 else
-    rm -rfv "$GAME_GENERATEOTR_ROM_Z64_FILE"
-    echo -e "${RED}Error: torch failed to generate OTR file.${NC}"
+    rm -rfv "$GAME_GENERATEO2R_ROM_Z64_FILE"
+    echo -e "${RED}Error: torch failed to generate O2R file.${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
