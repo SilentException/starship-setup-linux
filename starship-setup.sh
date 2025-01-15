@@ -86,6 +86,7 @@ echo -e "${GREEN}Installation directory set to:${NC} \"${CYAN}$GAME_DIR${NC}\"."
 # now we can define more paths and variables - depending on GAME_DIR
 GAME_BINARY_FILE="$GAME_DIR/starship.AppImage"
 GAME_VERSION_FILE="$GAME_DIR/VERSION"
+GAME_OTR_FILE_OLD="$GAME_DIR/starship.otr"
 GAME_O2R_FILE="$GAME_DIR/starship.o2r"
 GAME_ROM_OTR_FILE_OLD="$GAME_DIR/sf64.otr"
 GAME_ROM_O2R_FILE="$GAME_DIR/sf64.o2r"
@@ -228,6 +229,7 @@ if [ ! -f "$TEMP_O2R_DOWNLOAD_FILE" ]; then
     exit 1
 fi
 unzip -u -o -q "$TEMP_O2R_DOWNLOAD_FILE" -d "$TEMP_DIR" && mv -v "$TEMP_O2R_FILE" "$GAME_O2R_FILE" && rm -v "$TEMP_O2R_DOWNLOAD_FILE"
+rm -fv "$GAME_OTR_FILE_OLD" # remove old starship.otr file
 
 echo -e "${GREEN}Download was successful.${NC}"
 
