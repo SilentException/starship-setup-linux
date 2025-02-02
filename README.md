@@ -45,6 +45,7 @@ Ensure these dependencies are installed before running the script.
 ## Version History
 
 * 0.1: Initial public version (2024-12-29)
+* 0.2: Updated script to align with recent Starship repository / actions changes(o2r, new files in release)
 
 ## Contributing
 

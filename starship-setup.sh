@@ -41,16 +41,18 @@
 #
 # Version History:
 # - 0.1 Initial public version (2024-12-29)
+# - 0.2 Updated script to align with recent Starship repository / actions
+#       changes(o2r, new files in release)
 # 
 ###############################################################################
 
 # define colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # no color
+GREEN="\033[0;32m"
+RED="\033[0;31m"
+YELLOW="\033[1;33m"
+BLUE="\033[0;34m"
+CYAN="\033[0;36m"
+NC="\033[0m" # no color
 
 # define paths and variables
 WORKING_DIRECTORY="$(realpath "$(dirname "$0")")"
@@ -85,6 +87,7 @@ echo -e "${GREEN}Installation directory set to:${NC} \"${CYAN}$GAME_DIR${NC}\"."
 
 # now we can define more paths and variables - depending on GAME_DIR
 GAME_BINARY_FILE="$GAME_DIR/starship.AppImage"
+GAME_GAMECONTROLLERDB_FILE="$GAME_DIR/gamecontrollerdb.txt"
 GAME_VERSION_FILE="$GAME_DIR/VERSION"
 GAME_OTR_FILE_OLD="$GAME_DIR/starship.otr"
 GAME_O2R_FILE="$GAME_DIR/starship.o2r"
@@ -102,7 +105,10 @@ TEMP_DIR="$GAME_DIR/downloads"
 TEMP_BINARY_DOWNLOAD_FILE="$TEMP_DIR/Starship-linux.zip"
 TEMP_O2R_DOWNLOAD_FILE="$TEMP_DIR/starship.o2r.zip"
 TEMP_BINARY_FILE="$TEMP_DIR/starship.appimage"
+TEMP_GAMECONTROLLERDB_FILE="$TEMP_DIR/gamecontrollerdb.txt"
 TEMP_O2R_FILE="$TEMP_DIR/starship.o2r"
+TEMP_DIR_CONFIG_FILE="$TEMP_DIR/config.yml"
+TEMP_DIR_ASSETS_DIR="$TEMP_DIR/assets"
 
 PERFORMING_UPDATE=0
 # are we installing or updating...?
@@ -222,7 +228,15 @@ if [ ! -f "$TEMP_BINARY_DOWNLOAD_FILE" ] ; then
     #read -p "Press Enter to exit..."
     exit 1
 fi
-unzip -u -o -q "$TEMP_BINARY_DOWNLOAD_FILE" -d "$TEMP_DIR" && mv -v "$TEMP_BINARY_FILE" "$GAME_BINARY_FILE" && chmod +x "$GAME_BINARY_FILE" && rm -v "$TEMP_BINARY_DOWNLOAD_FILE"
+unzip -u -o -q "$TEMP_BINARY_DOWNLOAD_FILE" -d "$TEMP_DIR"
+if [ ! -f "$TEMP_BINARY_FILE" ]; then
+    echo -e "${RED}Game binary not found at \"$TEMP_BINARY_FILE\".${NC}"
+    #read -p "Press Enter to exit..."
+    exit 1
+fi
+rm -v "$TEMP_BINARY_DOWNLOAD_FILE"
+mv -v "$TEMP_BINARY_FILE" "$GAME_BINARY_FILE" && chmod +x "$GAME_BINARY_FILE"
+mv -v "$TEMP_GAMECONTROLLERDB_FILE" "$GAME_GAMECONTROLLERDB_FILE"
 if [ ! -f "$TEMP_O2R_DOWNLOAD_FILE" ]; then
     echo -e "${RED}O2R artifact not found at \"$TEMP_O2R_DOWNLOAD_FILE\".${NC}"
     #read -p "Press Enter to exit..."
@@ -267,21 +281,31 @@ while true; do
     break
 done
 
-# Starship GitHub sources
-mkdir -p "$GAME_SOURCES_DIR"
-if [ -d "$GAME_SOURCES_DIR/.git" ]; then
-    echo -e "${YELLOW}Repository already exists. Ensuring it's up-to-date...${NC}"
-    (
-        cd "$GAME_SOURCES_DIR" || { echo -e "${RED}Failed to change directory to $GAME_SOURCES_DIR${NC}"; exit 1; }
-        git fetch origin
-        git reset --hard origin/${DOWNLOAD_BRANCH}
-        echo -e "${GREEN}Repository reset to the latest commit.${NC}"
-    )
-else
-    echo -e "${BLUE}Cloning repository...${NC}"
-    git clone https://github.com/HarbourMasters/Starship.git "$GAME_SOURCES_DIR"
-    echo -e "${GREEN}Cloned GitHub repository to $GAME_SOURCES_DIR.${NC}"
+# Starship GitHub sources (not used any longer)
+if [[ -d "$GAME_SOURCES_DIR" ]]; then
+    echo -e "The folder \"${CYAN}$GAME_SOURCES_DIR${NC}\" is no longer used or needed."
+    read -p "Would you like to delete it? (y/n): " USER_INPUT
+    if [[ "$USER_INPUT" =~ ^[yY]$ ]]; then
+        rm -rf "$GAME_SOURCES_DIR"
+        echo -e "${YELLOW}Folder \"${CYAN}$GAME_SOURCES_DIR${NC}\" has been deleted.${NC}"
+    else
+        echo -e "${YELLOW}Folder \"${CYAN}$GAME_SOURCES_DIR${NC}\" was not deleted.${NC}"
+    fi
 fi
+# mkdir -p "$GAME_SOURCES_DIR"
+# if [ -d "$GAME_SOURCES_DIR/.git" ]; then
+#     echo -e "${YELLOW}Repository already exists. Ensuring it's up-to-date...${NC}"
+#     (
+#         cd "$GAME_SOURCES_DIR" || { echo -e "${RED}Failed to change directory to $GAME_SOURCES_DIR${NC}"; exit 1; }
+#         git fetch origin
+#         git reset --hard origin/${DOWNLOAD_BRANCH}
+#         echo -e "${GREEN}Repository reset to the latest commit.${NC}"
+#     )
+# else
+#     echo -e "${BLUE}Cloning repository...${NC}"
+#     git clone https://github.com/HarbourMasters/Starship.git "$GAME_SOURCES_DIR"
+#     echo -e "${GREEN}Cloned GitHub repository to $GAME_SOURCES_DIR.${NC}"
+# fi
 
 # torch - generate O2R
 rm -rfv "$GAME_GENERATEOTR_DIR_OLD" # remove old generate-otr directory
@@ -297,33 +321,34 @@ chmod +x "$GAME_GENERATEO2R_DIR/torch-latest"
 echo -e "${GREEN}Downloaded latest TORCH to $GAME_GENERATEO2R_DIR/torch-latest.${NC}"
 
 # copy configuration, assets and include files required for torch
-if [ -f "$GAME_SOURCES_CONFIG_FILE" ]; then
+if [ -f "$TEMP_DIR_CONFIG_FILE" ]; then
     rm -rfv "$GAME_GENERATEO2R_DIR/config.yml"
-    cp "$GAME_SOURCES_CONFIG_FILE" "$GAME_GENERATEO2R_DIR"
-    echo -e "${GREEN}Copied config.yml to $GAME_GENERATEO2R_DIR.${NC}"
+    mv "$TEMP_DIR_CONFIG_FILE" "$GAME_GENERATEO2R_DIR"
+    echo -e "${GREEN}Moved \"config.yml\" to $GAME_GENERATEO2R_DIR.${NC}"
 else
-    echo -e "${RED}Error: $GAME_SOURCES_CONFIG_FILE not found!${NC}"
+    echo -e "${RED}Error: $TEMP_DIR_CONFIG_FILE not found!${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
-if [ -d "$GAME_SOURCES_ASSETS_DIR" ]; then
+if [ -d "$TEMP_DIR_ASSETS_DIR" ]; then
     rm -rfv "$GAME_GENERATEO2R_DIR/assets"
-    cp -r "$GAME_SOURCES_ASSETS_DIR" "$GAME_GENERATEO2R_DIR"
-    echo -e "${GREEN}Copied assets folder to $GAME_GENERATEO2R_DIR.${NC}"
+    mv "$TEMP_DIR_ASSETS_DIR" "$GAME_GENERATEO2R_DIR"
+    echo -e "${GREEN}Moved \"assets\" folder to $GAME_GENERATEO2R_DIR.${NC}"
 else
-    echo -e "${RED}Error: $GAME_SOURCES_ASSETS_DIR not found!${NC}"
+    echo -e "${RED}Error: $TEMP_DIR_ASSETS_DIR not found!${NC}"
     #read -p "Press Enter to exit..."
     exit 1
 fi
-if [ -d "$GAME_SOURCES_INCLUDE_DIR" ]; then
-    rm -rfv "$GAME_GENERATEO2R_DIR/include"
-    cp -r "$GAME_SOURCES_INCLUDE_DIR" "$GAME_GENERATEO2R_DIR"
-    echo -e "${GREEN}Copied includes folder to $GAME_GENERATEO2R_DIR.${NC}"
-else
-    echo -e "${RED}Error: $GAME_SOURCES_INCLUDE_DIR not found!${NC}"
-    #read -p "Press Enter to exit..."
-    exit 1
-fi
+rm -rfv "$GAME_GENERATEO2R_DIR/include"
+# if [ -d "$GAME_SOURCES_INCLUDE_DIR" ]; then
+#     rm -rfv "$GAME_GENERATEO2R_DIR/include"
+#     cp -r "$GAME_SOURCES_INCLUDE_DIR" "$GAME_GENERATEO2R_DIR"
+#     echo -e "${GREEN}Copied \"include\" folder to $GAME_GENERATEO2R_DIR.${NC}"
+# else
+#     echo -e "${RED}Error: $GAME_SOURCES_INCLUDE_DIR not found!${NC}"
+#     #read -p "Press Enter to exit..."
+#     exit 1
+# fi
 
 # execute torch to generate O2R file
 echo -e "${YELLOW}Executing \"${NC}${CYAN}$GAME_GENERATEO2R_DIR/torch-latest o2r $GAME_GENERATEO2R_ROM_Z64_FILE${NC}${YELLOW}\" to generate ROM O2R...${NC}"
@@ -340,9 +365,9 @@ fi
 
 # check if torch successfully generated O2R file
 if [ -f "$GAME_GENERATEO2R_ROM_O2R_FILE" ]; then
-    rm -rfv "$GAME_GENERATEO2R_ROM_Z64_FILE"
     echo -e "${GREEN}torch-latest executed successfully. Copying generated O2R...${NC}"
     mv -v "$GAME_GENERATEO2R_ROM_O2R_FILE" "$GAME_ROM_O2R_FILE"
+    rm -rfv "$GAME_GENERATEO2R_ROM_Z64_FILE"
     rm -rfv "$GAME_ROM_OTR_FILE_OLD" # remove old sf64.otr file
 else
     rm -rfv "$GAME_GENERATEO2R_ROM_Z64_FILE"
@@ -364,10 +389,10 @@ echo -e "\n${YELLOW}Follow these steps to set up and run the game from Steam:${N
 echo -e "\n1. Add \"${CYAN}$GAME_BINARY_FILE${NC}\" to ${CYAN}Steam${NC}."
 echo -e "   - Use the ${CYAN}SteamGridDB Decky plugin${NC} to set the artwork, or set it manually."
 echo -e "\n2. In ${CYAN}Steam Input${NC} for the newly added game, set the layout to:"
-echo -e "   ${BLUE}'Gamepad with Mouse Trackpad'${NC}."
+echo -e "   \"${BLUE}Gamepad with Mouse Trackpad${NC}\"."
 echo -e "   - Edit the layout and set the ${CYAN}right trackpad click${NC} to ${CYAN}left mouse click${NC}."
 echo -e "\n3. Configure additional buttons in the layout (optional):"
-echo -e "   - Assign ${CYAN}'Select/View'${NC} to keyboard key ${CYAN}F1${NC} using a ${CYAN}long press activation${NC}."
+echo -e "   - Assign \"${CYAN}Select/View${NC}\" to keyboard key ${CYAN}F1${NC} using a ${CYAN}long press activation${NC}."
 echo -e "   - Alternatively, use one of the rear buttons for the ${CYAN}F1 key${NC}."
 echo -e "   - Assign ${CYAN}F11${NC} to a back key for full-screen mode toggle."
 echo -e "\n4. Run the game for the first time to configure the graphic settings:"
